@@ -1,54 +1,46 @@
-// Book My Seat - Client Application
-import React, { useEffect, useState } from 'react';
+// Opus Dining - Sovereign Concierge Protocol (Production Edition)
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { 
-  Users, Calendar, Clock, MapPin, 
-  ChevronRight, Star, Wine, ShieldCheck, 
-  CreditCard, BellOff, Sparkles, Navigation,
-  Award, ArrowRight, X, User, ArrowLeft,
-  ChevronDown, GlassWater, UtensilsCrossed,
-  Search, LogOut, CheckCircle, Palmtree,
-  Building2, Waves, Tent, Landmark
+  MapPin, Calendar, Clock, Users, 
+  ChevronRight, ArrowRight, ArrowLeft,
+  GlassWater, Utensils, CreditCard, 
+  Smartphone, Banknote, CheckCircle2,
+  Sparkles, Camera, Lock, User,
+  Music, Star, LocateFixed, Plus, 
+  SkipForward, Mail, QrCode, PenTool, X,
+  Diamond, Award, Landmark, Building2, Waves,
+  Shield, Heart, Briefcase, PartyPopper, Gem, LogOut
 } from 'lucide-react';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-// --- API Client Configuration with Retry Logic ---
+// --- Resilience Engine ---
 axios.interceptors.response.use(null, async (error) => {
   const { config } = error;
   if (!config || !config.retry) return Promise.reject(error);
   config.retryCount = config.retryCount || 0;
   if (config.retryCount >= config.retry) return Promise.reject(error);
   config.retryCount += 1;
-  const backoff = new Promise((resolve) => {
-    setTimeout(() => resolve(), config.retryDelay || 1000);
-  });
+  const backoff = new Promise((resolve) => setTimeout(() => resolve(), config.retryDelay || 1000));
   await backoff;
   return axios(config);
 });
 
 // --- UI Error Boundary ---
 class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+  constructor(props) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError(error) { return { hasError: true }; }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#070708] text-white flex items-center justify-center text-center p-10 font-sans">
+        <div className="min-h-screen bg-[#020202] text-white flex items-center justify-center text-center p-10 font-sans">
           <div className="max-w-md">
-            <div className="w-20 h-20 border border-[#D4AF37] rounded-full flex items-center justify-center mx-auto mb-8 text-[#D4AF37]">
-              <X size={32} />
-            </div>
-            <h2 className="text-4xl font-serif italic mb-4">Protocol Interrupted</h2>
-            <p className="text-white/40 mb-8 font-light">The architectural interface encountered an unexpected state. Please re-initialize the session.</p>
-            <button onClick={() => window.location.reload()} className="px-8 py-4 bg-[#D4AF37] text-black rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#C4A030] transition-all">
-              Re-initialize Interface
-            </button>
+            <OpusLogo className="w-24 h-24 mx-auto mb-10" />
+            <h2 className="text-4xl font-serif italic mb-4 text-[#D4AF37]">Interface Disruption</h2>
+            <button onClick={() => window.location.reload()} className="px-8 py-4 bg-[#D4AF37] text-black rounded-full text-xs font-bold uppercase tracking-[0.4em]">Re-Initialize</button>
           </div>
         </div>
       );
@@ -62,165 +54,181 @@ const getToken = () => localStorage.getItem('token');
 const setToken = (token) => localStorage.setItem('token', token);
 const getUser = () => JSON.parse(localStorage.getItem('user') || 'null');
 const setUser = (user) => localStorage.setItem('user', JSON.stringify(user));
-const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-};
+const logout = () => { localStorage.removeItem('token'); localStorage.removeItem('user'); };
+// --- Reimagined 3D Metallic Opus Logo ---
+const OpusLogo = ({ className = "", showText = false, userName = "" }) => (
+  <div className={`flex items-center justify-center gap-6 ${className}`}>
+    <div className="relative w-full aspect-square flex items-center justify-center">
+      {/* Outer Glowing Rings */}
+      <div className="absolute inset-[-20px] bg-[#D4AF37]/5 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute inset-[-2px] border border-[#D4AF37]/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
 
-const IMAGES = {
-  hero: "/assets/images/hero.jpg",
-  interior: "/assets/images/interior.jpg",
-  privateVault: "/assets/images/private.jpg",
-  rooftop: "/assets/images/rooftop.jpg",
-  balcony: "/assets/images/bistro.jpg",
-  window: "/assets/images/window.jpg"
-};
-
-const restaurantImages = [
-  "/assets/images/hero.jpg",
-  "/assets/images/private.jpg",
-  "/assets/images/rooftop.jpg",
-  "/assets/images/window.jpg",
-  "/assets/images/interior.jpg",
-  "/assets/images/bistro.jpg",
-  "/assets/images/gourmet.jpg"
-];
-
-const getRestaurantImage = (id) => restaurantImages[id % restaurantImages.length];
-
-const VenueIcon = ({ type, size = 24 }) => {
-  const icons = {
-    'Italian': <UtensilsCrossed size={size} />,
-    'Bistro': <Wine size={size} />,
-    'Coastal': <Waves size={size} />,
-    'Heritage': <Landmark size={size} />,
-    'Rooftop': <Building2 size={size} />,
-    'Default': <Navigation size={size} />
-  };
-  return icons[type] || icons['Default'];
-};
-
-const PageTransition = ({ children }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 15 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -15 }}
-    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-    className="w-full h-full flex flex-col items-center justify-center"
-  >
-    {children}
-  </motion.div>
+      {/* Main Circle Container */}
+      <div className="relative z-10 w-full h-full rounded-full overflow-hidden border-2 border-[#D4AF37]/40 shadow-[0_0_50px_rgba(212,175,55,0.3)] bg-black flex items-center justify-center">
+        <img 
+          src="/assets/logo.jpeg" 
+          alt="Opus Logo" 
+          className="w-full h-full object-cover scale-100 brightness-110 contrast-110" 
+        />
+      </div>
+    </div>
+    {showText && (
+      <div className="text-left">
+        <h1 className="text-2xl font-serif font-black tracking-tighter leading-none text-transparent bg-clip-text bg-gradient-to-r from-[#BF953F] to-[#FCF6BA]">
+          {userName ? userName.split(' ')[0].toUpperCase() : 'OPUS'}
+        </h1>
+        <p className="text-[8px] font-bold tracking-[0.4em] text-gray-400 uppercase mt-1">Concierge Protocol</p>
+      </div>
+    )}
+  </div>
 );
 
-const GoldButton = ({ children, onClick, variant = "solid", className = "", disabled = false }) => {
-  const styles = {
-    solid: "bg-[#D4AF37] text-black hover:bg-[#C4A030]",
-    outline: "border border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black",
-    ghost: "text-white/60 hover:text-white"
+const getRestaurantImage = (id) => {
+  const images = [
+    "/assets/images/venue_lively.jpg",
+    "/assets/images/hero_main.jpg",
+    "/assets/images/venue_corporate.jpg",
+    "/assets/images/venue_wedding.jpg",
+    "/assets/images/venue_private.jpg",
+    "/assets/images/venue_rooftop.jpg"
+  ];
+  return images[id % images.length];
+};
+
+// --- 3D Interaction Wrapper ---
+const TiltCard = ({ children, className }) => {
+  const x = useMotionValue(0), y = useMotionValue(0);
+  const mouseXSpring = useSpring(x), mouseYSpring = useSpring(y);
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["5deg", "-5deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-5deg", "5deg"]);
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
   };
+  const handleMouseLeave = () => { x.set(0); y.set(0); };
   return (
-    <button 
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-8 py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 ${styles[variant]} ${className}`}
-    >
-      {children}
-    </button>
+    <motion.div style={{ perspective: 1200 }} className="w-full h-full">
+      <motion.div onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} style={{ rotateX, rotateY, transformStyle: "preserve-3d" }} className={`w-full h-full ${className}`}>
+        <div style={{ transform: "translateZ(20px)" }} className="w-full h-full relative z-10">{children}</div>
+      </motion.div>
+    </motion.div>
   );
 };
 
-const Header = ({ currentUser, setStep, setAuthMode, setView, onLogout }) => (
-  <nav className="fixed top-0 w-full z-50 px-8 py-6 flex justify-between items-center bg-black/80 backdrop-blur-md border-b border-white/5">
-    <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setStep('discovery')}>
-      <div className="w-10 h-10 border border-[#D4AF37] rounded-full flex items-center justify-center text-[#D4AF37] font-serif italic text-xl group-hover:bg-[#D4AF37] group-hover:text-black transition-all">B</div>
-      <div>
-        <span className="block text-sm font-serif font-bold tracking-widest uppercase">BOOK MY SEAT</span>
-        <span className="block text-[8px] text-[#D4AF37] tracking-[0.3em] font-bold uppercase">Digital Protocol</span>
-      </div>
-    </div>
-    
-    <div className="hidden md:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
-      <span className="hover:text-[#D4AF37] cursor-pointer transition-colors" onClick={() => setStep('discovery')}>Discovery</span>
-      <span className="hover:text-[#D4AF37] cursor-pointer transition-colors" onClick={() => setView('reservations')}>My Archive</span>
-      {currentUser ? (
-        <div className="flex items-center gap-4 border-l border-white/10 pl-10">
-          <div className="w-10 h-10 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center text-[#D4AF37] font-bold">
-            {currentUser.full_name?.charAt(0)}
-          </div>
-          <button onClick={onLogout} className="hover:text-[#D4AF37] transition-colors"><LogOut size={14}/></button>
-        </div>
-      ) : (
-        <button onClick={() => setAuthMode('login')} className="hover:text-[#D4AF37] transition-colors">Sign In</button>
-      )}
-    </div>
-  </nav>
+// --- Shared UI ---
+const OpusButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
+  const styles = {
+    primary: "bg-gradient-to-r from-[#BF953F] via-[#FCF6BA] to-[#B38728] text-black shadow-[0_10px_30px_rgba(212,175,55,0.2)] hover:shadow-[0_15px_40px_rgba(212,175,55,0.4)] hover:brightness-110 disabled:opacity-50 disabled:grayscale",
+    outline: "bg-[#050505] border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37]/10",
+  };
+  return (
+    <motion.button whileTap={{ scale: 0.98 }} onClick={onClick} disabled={disabled} className={`px-10 py-5 rounded-full text-[9px] font-bold uppercase tracking-[0.5em] transition-all duration-300 flex items-center justify-center gap-4 ${styles[variant]} ${className}`}>{children}</motion.button>
+  );
+};
+
+const SectionHeading = ({ step, title, subtitle }) => (
+  <header className="mb-12 relative z-10 text-center md:text-left">
+    <div className="flex items-center justify-center md:justify-start gap-4 mb-6"><span className="w-8 h-[1px] bg-gradient-to-r from-[#D4AF37] to-transparent hidden md:block" /><span className="text-[9px] font-bold uppercase tracking-[0.5em] text-[#D4AF37] drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]">Phase 0{step}</span></div>
+    <h2 className="text-4xl lg:text-6xl font-serif font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 leading-tight mb-4 drop-shadow-xl">{title}</h2>
+    <p className="text-xs font-light tracking-widest uppercase text-gray-400 leading-relaxed max-w-xl mx-auto md:mx-0">{subtitle}</p>
+  </header>
 );
 
+const LOCAL_IMAGES = {
+  hero: "/assets/images/hero_main.jpg",
+  corporate: "/assets/images/venue_corporate.jpg",
+  wedding: "/assets/images/venue_wedding.jpg",
+  private: "/assets/images/venue_private.jpg",
+  rooftop: "/assets/images/venue_rooftop.jpg",
+  food: "/assets/images/food_1.jpg",
+  beverage: "/assets/images/beverage_1.jpg",
+  blueprint_axis: "/assets/images/blueprint_axis.jpg",
+  blueprint_perimeter: "/assets/images/blueprint_perimeter.jpg",
+  blueprint_constellation: "/assets/images/blueprint_constellation.jpg",
+  event_corporate: "/assets/images/event_corporate.jpg",
+  event_romance: "/assets/images/event_romance.jpg",
+  event_wedding: "/assets/images/event_wedding.jpg",
+  event_private: "/assets/images/event_private.jpg"
+};
+
+const EVENT_TYPES = [
+  { id: 'corporate', label: 'Corporate Gala', icon: <Briefcase size={18}/>, img: LOCAL_IMAGES.event_corporate },
+  { id: 'romance', label: 'Intimate Anniversary', icon: <Heart size={18}/>, img: LOCAL_IMAGES.event_romance },
+  { id: 'wedding', label: 'Wedding Reception', icon: <PartyPopper size={18}/>, img: LOCAL_IMAGES.event_wedding },
+  { id: 'private', label: 'Private Reserve', icon: <Shield size={18}/>, img: LOCAL_IMAGES.event_private }
+];
+
+const BLUEPRINTS = [
+  { id: 'B1', name: 'The Imperial Axis', cap: '10-50 Guests', desc: 'A grand central table alignment maximizing conversational flow.', image: LOCAL_IMAGES.blueprint_axis },
+  { id: 'B2', name: 'Secluded Perimeter', cap: '2-12 Guests', desc: 'Discreet alcove arrangements prioritizing acoustic privacy.', image: LOCAL_IMAGES.blueprint_perimeter },
+  { id: 'B3', name: 'Gala Constellation', cap: '50+ Guests', desc: 'Distributed cluster seating fostering a dynamic, roaming networking environment.', image: LOCAL_IMAGES.blueprint_constellation }
+];
+
+// --- Main App ---
 function App() {
+  const [step, setStep] = useState(0); 
   const [currentUser, setCurrentUser] = useState(getUser());
-  const [view, setView] = useState('main'); 
-  const [step, setStep] = useState('discovery'); 
-  const [authMode, setAuthMode] = useState('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [myBookings, setMyBookings] = useState([]);
-  const [bookingDate, setBookingDate] = useState('today');
-  const [bookingTime, setBookingTime] = useState('20:30');
-  const [guestCount, setGuestCount] = useState(2);
-  const [protocols, setProtocols] = useState({ ghostPay: true, surprise: false });
+  const [authMode, setAuthMode] = useState('login'); 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-
-  const axiosConfig = () => ({ 
-    headers: { Authorization: `Bearer ${getToken()}` },
-    retry: 2, 
-    retryDelay: 1000 
+  const [isLocating, setIsLocating] = useState(false);
+  
+  const [manifest, setManifest] = useState({
+    user: 'leninjacob891@gmail.com', fullName: '', password: '', eventType: '', customEvent: '', location: 'Mumbai', venue: null,
+    guests: 4, dynamicCapacity: false, blueprint: null, cart: [], customDish: '', skipMenu: false,
+    paymentProtocol: 'retainer', guestInvites: [], newGuestName: '', newGuestEmail: '', rating: 0,
+    bookingTime: '20:30', bookingDate: 'today'
   });
+
+  const [restaurants, setRestaurants] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [myBookings, setMyBookings] = useState([]);
+
+  const axiosConfig = () => ({ headers: { Authorization: `Bearer ${getToken()}` }, retry: 2, retryDelay: 1000 });
 
   useEffect(() => {
     fetchRestaurants();
     if (currentUser) fetchMyBookings();
-  }, [currentUser]);
+    if (step === 0) { const timer = setTimeout(() => setStep(currentUser ? 2 : 1), 3000); return () => clearTimeout(timer); }
+  }, [step, currentUser]);
 
   const fetchRestaurants = async () => {
-    try {
-      const res = await axios.get(`${BACKEND_URL}/restaurants`);
-      setRestaurants(res.data.data || []);
-    } catch (err) { console.error("Venue fetch error", err); }
+    try { const res = await axios.get(`${BACKEND_URL}/restaurants`); setRestaurants(res.data.data || []); } catch (err) { console.error(err); }
   };
 
-  const fetchTables = async (id) => {
+  const fetchEstateDetails = async (venue) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${BACKEND_URL}/restaurants/${id}/tables`);
-      setTables(res.data.data || []);
-    } catch (err) { console.error("Table fetch error", err); }
+      const [tableRes, menuRes] = await Promise.all([
+        axios.get(`${BACKEND_URL}/restaurants/${venue.id}/tables`),
+        axios.get(`${BACKEND_URL}/restaurants/${venue.id}/menu`)
+      ]);
+      setTables(tableRes.data.data || []);
+      setMenuItems(menuRes.data.data || []);
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
 
   const fetchMyBookings = async () => {
     try {
-      const res = await axios.get(`${BACKEND_URL}/bookings/my-bookings`, axiosConfig());
+      const url = currentUser?.role === 'admin' ? `${BACKEND_URL}/bookings` : `${BACKEND_URL}/bookings/my-bookings`;
+      const res = await axios.get(url, axiosConfig());
       setMyBookings(res.data.data || []);
-    } catch (err) { console.error("Bookings fetch error", err); }
+    } catch (err) { console.error(err); }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${BACKEND_URL}/auth/login`, { email, password });
+      const res = await axios.post(`${BACKEND_URL}/auth/login`, { email: manifest.user, password: manifest.password });
       setToken(res.data.data.token);
       setUser(res.data.data.user);
       setCurrentUser(res.data.data.user);
-      setStep('discovery');
-    } catch (err) { setMessage(err.response?.data?.message || 'Access Denied'); }
+      setStep(2);
+    } catch (err) { setMessage('Identity unverified.'); }
     setLoading(false);
   };
 
@@ -229,272 +237,508 @@ function App() {
     setLoading(true);
     try {
       const res = await axios.post(`${BACKEND_URL}/auth/register`, { 
-        email, password, full_name: fullName, phone: phone || '0000000000' 
+        email: manifest.user, 
+        password: manifest.password, 
+        full_name: manifest.fullName, 
+        phone: '0000000000' 
       });
       setToken(res.data.data.token);
       setUser(res.data.data.user);
       setCurrentUser(res.data.data.user);
-      setStep('discovery');
-    } catch (err) { setMessage(err.response?.data?.message || 'Registration Failed'); }
+      setStep(2);
+    } catch (err) { setMessage('Lineage establishment failed.'); }
     setLoading(false);
   };
 
-  const handleVenueSelect = (restaurant) => {
-    setSelectedRestaurant(restaurant);
-    fetchTables(restaurant.id);
-    setStep('selection');
-  };
-
-  const handleCreateBooking = async () => {
-    if (!currentUser) { setAuthMode('login'); return; }
+  const handleFinalizeManifest = async () => {
     setLoading(true);
-    const date = bookingDate === 'today' ? new Date().toISOString().split('T')[0] : new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    const date = manifest.bookingDate === 'today' ? new Date().toISOString().split('T')[0] : new Date(Date.now() + 86400000).toISOString().split('T')[0];
     try {
       await axios.post(`${BACKEND_URL}/bookings`, {
-        restaurant_id: selectedRestaurant.id,
-        table_id: selectedTable.id,
+        restaurant_id: manifest.venue.id,
+        table_id: tables[0]?.id || 1, 
         booking_date: date,
-        booking_time: bookingTime,
-        guest_count: guestCount,
-        is_surprise: protocols.surprise,
-        notes: protocols.ghostPay ? "Ghost Pay Protocol enabled." : ""
+        booking_time: manifest.bookingTime,
+        guest_count: manifest.guests,
+        notes: `Event: ${manifest.eventType}. Protocol: ${manifest.paymentProtocol}. Menu: ${manifest.cart.map(m => m.name).join(', ')}`
       }, axiosConfig());
-      setStep('success');
+      setStep(9);
       fetchMyBookings();
-    } catch (err) { setMessage(err.response?.data?.message || 'Booking Failed'); }
+    } catch (err) { setMessage('Protocol Collision Detected.'); }
     setLoading(false);
   };
 
   const handleCancelBooking = async (id) => {
-    try {
-      await axios.delete(`${BACKEND_URL}/bookings/${id}`, axiosConfig());
-      fetchMyBookings();
-    } catch (err) { console.error("Cancel failed", err); }
+    try { await axios.delete(`${BACKEND_URL}/bookings/${id}`, axiosConfig()); fetchMyBookings(); } catch (err) { console.error(err); }
   };
 
-  const resetFlow = () => {
-    setStep('discovery');
-    setView('main');
-    setSelectedTable(null);
-    setSelectedRestaurant(null);
+  const updateManifest = (key, value) => setManifest(prev => ({ ...prev, [key]: value }));
+  const toggleCartItem = (item) => {
+    setManifest(prev => ({ ...prev, cart: prev.cart.some(i => i.id === item.id) ? prev.cart.filter(i => i.id !== item.id) : [...prev.cart, item] }));
+  };
+  const handleAddGuest = () => {
+    if(manifest.newGuestName && manifest.newGuestEmail) {
+      const guestToken = `OPUS-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const updatedInvites = [...manifest.guestInvites, { 
+        name: manifest.newGuestName, 
+        email: manifest.newGuestEmail,
+        token: guestToken // Proprietary Access Token
+      }];
+      setManifest(prev => ({ 
+        ...prev, 
+        guestInvites: updatedInvites, 
+        guests: prev.dynamicCapacity ? updatedInvites.length : prev.guests, 
+        newGuestName: '', 
+        newGuestEmail: '' 
+      }));
+    }
   };
 
-  const AuthView = () => (
-    <PageTransition>
-      <div className="grid lg:grid-cols-2 w-full max-w-6xl gap-16 items-center">
-        <div className="hidden lg:block space-y-8 text-left">
-          <header>
-            <span className="text-[#D4AF37] text-xs font-bold uppercase tracking-[0.4em]">Secure Key No. 004</span>
-            <h2 className="text-8xl font-serif italic mt-4 leading-tight text-white">Elite <br/> Access.</h2>
-          </header>
-          <p className="text-white/40 max-w-md leading-loose text-sm font-light">
-            Authenticate to synchronize your dining manifests and digital table keys.
-          </p>
-        </div>
-        <div className="bg-[#111112] p-12 rounded-[40px] border border-white/5 shadow-2xl w-full max-w-md mx-auto">
-          <h3 className="text-3xl font-serif italic mb-8 text-white">{authMode === 'login' ? 'Sign In' : 'Join Membership'}</h3>
-          <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-6">
-            {authMode === 'register' && (
-              <input type="text" placeholder="Full Name" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:border-[#D4AF37] outline-none text-white" value={fullName} onChange={e => setFullName(e.target.value)} required />
-            )}
-            <input type="email" placeholder="Email Address" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:border-[#D4AF37] outline-none text-white" value={email} onChange={e => setEmail(e.target.value)} required />
-            <input type="password" placeholder="Password" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm focus:border-[#D4AF37] outline-none text-white" value={password} onChange={e => setPassword(e.target.value)} required />
-            <GoldButton className="w-full py-5" disabled={loading}>{loading ? 'Authenticating...' : authMode === 'login' ? 'Enter' : 'Create Account'}</GoldButton>
-          </form>
-          {message && <p className="text-[#D4AF37] text-center mt-4 text-[10px] tracking-widest">{message}</p>}
-          <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-center mt-8 text-[10px] text-white/20 uppercase tracking-[0.2em] hover:text-white transition-colors">
-            {authMode === 'login' ? "Don't have an account? Join us" : "Already a member? Sign In"}
-          </button>
-        </div>
-      </div>
-    </PageTransition>
-  );
+  const cartTotal = manifest.cart.reduce((sum, item) => sum + item.price, 0);
+  const RETAINER_FEE = 15000; 
+  const settlementAmount = manifest.paymentProtocol === 'retainer' ? RETAINER_FEE : (RETAINER_FEE + cartTotal);
+  const fadeUp = { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -30 }, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } };
 
   return (
-    <div className="min-h-screen bg-[#070708] text-white font-sans selection:bg-[#D4AF37] selection:text-black overflow-x-hidden">
-      <Header currentUser={currentUser} setStep={setStep} setAuthMode={setAuthMode} setView={setView} onLogout={() => { logout(); setCurrentUser(null); }} />
-      <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto min-h-[calc(100vh-80px)] flex items-center justify-center">
+    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-[#D4AF37] selection:text-black overflow-x-hidden relative">
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(2,2,2,0.6)_0%,_rgba(0,0,0,0.95)_100%)]" />
+        <motion.div animate={{ rotateZ: 360, rotateX: 20 }} transition={{ duration: 150, repeat: Infinity, ease: 'linear' }} className="w-[150vw] h-[150vw] absolute rounded-full border border-[#D4AF37]/5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ transformStyle: 'preserve-3d', perspective: 1000 }} />
+      </div>
+
+      <AnimatePresence>
+        {step > 0 && (
+          <motion.nav initial={{ y: -100 }} animate={{ y: 0 }} className="fixed top-0 w-full z-50 px-12 py-8 flex flex-col md:flex-row justify-between items-center bg-gradient-to-b from-[#000] to-transparent backdrop-blur-md border-b border-white/5 gap-4">
+            <div className="flex items-center gap-4 cursor-pointer group" onClick={() => setStep(currentUser ? 2 : 1)}>
+              <OpusLogo className="w-16 h-16 md:w-20 md:h-20" showText={true} userName={currentUser?.full_name} />
+            </div>
+            {step > 1 && step < 9 && (
+              <div className="flex gap-3 items-center">
+                {[2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className={`h-[2px] rounded-full transition-all duration-700 ${step >= i ? 'w-10 bg-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.6)]' : 'w-2 bg-white/10'}`} />
+                ))}
+              </div>
+            )}
+            {currentUser && <button onClick={() => { logout(); setCurrentUser(null); setStep(1); }} className="text-[9px] font-bold text-white/20 hover:text-[#9B1B30] uppercase tracking-widest flex items-center gap-2">Log Out <LogOut size={12}/></button>}
+          </motion.nav>
+        )}
+      </AnimatePresence>
+
+      <main className="pt-32 pb-24 px-8 max-w-7xl mx-auto min-h-screen flex items-center justify-center relative z-10">
         <AnimatePresence mode="wait">
-          {step === 'discovery' && view === 'main' && (
-            <PageTransition key="discovery">
-              <div className="grid lg:grid-cols-2 gap-16 items-center w-full">
-                <div className="space-y-8 text-left">
-                  <header>
-                    <span className="text-[#D4AF37] text-xs font-bold uppercase tracking-[0.4em]">The Discovery Suite</span>
-                    <h2 className="text-7xl md:text-8xl font-serif italic mt-4 leading-tight">Curated <br/> Venues.</h2>
-                  </header>
-                  <p className="text-white/40 max-w-md leading-loose text-sm font-light">Every venue in our digital collection offers architectural precision. Select a destination to initiate your reservation protocol.</p>
-                  <div className="grid grid-cols-2 gap-4 pt-4">
-                    {restaurants.map((r, idx) => (
-                      <div key={r.id} onClick={() => handleVenueSelect(r)} className="relative group bg-[#111112] border border-white/10 rounded-[30px] cursor-pointer hover:border-[#D4AF37] transition-all overflow-hidden aspect-[4/3]">
-                        <img src={getRestaurantImage(idx)} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt={r.name} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10" />
-                        <div className="absolute top-6 right-6 text-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity z-20"><VenueIcon type={r.cuisine_type} /></div>
-                        <div className="absolute bottom-6 left-6 z-20 text-left">
-                          <h4 className="font-serif italic text-xl group-hover:text-[#D4AF37]">{r.name}</h4>
-                          <span className="text-[10px] text-white/40 tracking-widest uppercase">{r.city}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="relative group hidden lg:block">
-                  <div className="absolute inset-0 border border-[#D4AF37]/30 translate-x-4 translate-y-4 rounded-[40px] transition-transform group-hover:translate-x-6 group-hover:translate-y-6" />
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-[40px] shadow-2xl flex flex-col items-center justify-center bg-[#070708]">
-                     <img src={IMAGES.hero} className="absolute inset-0 w-full h-full object-cover opacity-80" alt="Hero" />
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                     <div className="relative z-10 text-center">
-                       <Sparkles size={60} className="text-[#D4AF37] opacity-40 mb-6 mx-auto" />
-                       <h3 className="text-3xl font-serif italic text-white/40 uppercase tracking-widest">The Royal Standard</h3>
-                     </div>
-                  </div>
-                </div>
-              </div>
-            </PageTransition>
+
+          {/* STEP 0: SPLASH */}
+          {step === 0 && (
+            <motion.section key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }} className="flex flex-col items-center justify-center w-full text-center">
+              <OpusLogo className="w-80 h-80 mb-16" />
+              <motion.div animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 2, repeat: Infinity }} className="text-[10px] font-bold tracking-[0.8em] uppercase text-[#D4AF37] glow-text">Initializing Sovereign Protocol</motion.div>
+            </motion.section>
           )}
-          {step === 'selection' && selectedRestaurant && (
-            <PageTransition key="selection">
-              <div className="text-center mb-12">
-                <button onClick={() => setStep('discovery')} className="text-white/30 hover:text-white flex items-center gap-2 mx-auto mb-6 transition-colors"><ArrowLeft size={14} /> <span className="text-[10px] font-bold uppercase tracking-widest">Back to Venues</span></button>
-                <h2 className="text-4xl font-serif italic mb-2">Claim your perspective</h2>
-                <p className="text-white/40 text-sm font-light">Select an architectural asset within {selectedRestaurant.name}.</p>
+
+          {step === 1 && (
+            <motion.section key="step1" {...fadeUp} className="w-full max-w-md">
+              <div className="bg-[#0A0A0A] rounded-[50px] p-12 border border-white/10 shadow-3xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+                <div className="text-center mb-12 relative z-10">
+                  <OpusLogo className="w-20 h-20 mx-auto mb-6" />
+                  
+                  {/* Auth Mode Tabs */}
+                  <div className="flex justify-center gap-8 mb-8 border-b border-white/5 pb-4">
+                    <button 
+                      onClick={() => setAuthMode('login')}
+                      className={`text-[10px] font-bold uppercase tracking-[0.4em] transition-all ${authMode === 'login' ? 'text-[#D4AF37] glow-text' : 'text-white/20 hover:text-white/40'}`}
+                    >
+                      Sign In
+                    </button>
+                    <button 
+                      onClick={() => setAuthMode('register')}
+                      className={`text-[10px] font-bold uppercase tracking-[0.4em] transition-all ${authMode === 'register' ? 'text-[#D4AF37] glow-text' : 'text-white/20 hover:text-white/40'}`}
+                    >
+                      Register
+                    </button>
+                  </div>
+
+                  <h2 className="text-4xl font-serif italic text-white leading-none">{authMode === 'login' ? 'Unseal Passage' : 'Establish Lineage'}</h2>
+                  <p className="text-[10px] uppercase tracking-[0.4em] text-gray-500 mt-4">{authMode === 'login' ? 'Identity Verification Required' : 'Forge Your Royal Identity'}</p>
+                </div>
+                <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-8 relative z-10">
+                  {authMode === 'register' && (
+                    <div className="relative">
+                      <User className="absolute left-6 top-1/2 -translate-y-1/2 text-[#D4AF37]/40" size={18} />
+                      <input type="text" placeholder="Full Legal Name" value={manifest.fullName} onChange={(e) => updateManifest('fullName', e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-2xl py-5 pl-16 pr-6 text-sm text-white focus:border-[#D4AF37] transition-all" required />
+                    </div>
+                  )}
+                  <div className="relative">
+                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-[#D4AF37]/40" size={18} />
+                    <input type="email" placeholder="Digital Missive (Email)" value={manifest.user} onChange={(e) => updateManifest('user', e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-2xl py-5 pl-16 pr-6 text-sm text-white focus:border-[#D4AF37] transition-all" required />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-[#D4AF37]/40" size={18} />
+                    <input type="password" placeholder="Sovereign Cipher" value={manifest.password} onChange={(e) => updateManifest('password', e.target.value)} className="w-full bg-black/40 border border-white/5 rounded-2xl py-5 pl-16 pr-6 text-sm text-white focus:border-[#D4AF37] transition-all" required />
+                  </div>
+                  <OpusButton type="submit" disabled={loading} className="w-full mt-4">
+                    {loading ? 'Decrypting...' : authMode === 'login' ? 'Break Seal' : 'Forge Seal'}
+                  </OpusButton>
+                </form>
+                <button 
+                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                  className="w-full text-center mt-10 text-[9px] text-white/30 uppercase tracking-[0.2em] hover:text-[#E6B325] transition-colors duration-300 font-bold border-t border-white/5 pt-8"
+                >
+                  {authMode === 'login' ? "Not a patron? Establish Lineage" : "Existing Member? Return to Passage"}
+                </button>
+                {message && <p className="text-[#9B1B30] text-center mt-6 text-[10px] tracking-widest font-bold uppercase bg-[#9B1B30]/10 py-3 rounded-lg border border-[#9B1B30]/20">{message}</p>}
               </div>
-              <div className="grid md:grid-cols-4 gap-6 w-full">
-                {tables.map((t, idx) => (
-                  <motion.div key={t.id} whileHover={{ y: -10 }} onClick={() => { if(t.is_available) { setSelectedTable(t); setStep('protocols'); } }} className={`relative aspect-[3/4] rounded-[30px] overflow-hidden group cursor-pointer border ${t.is_available ? 'border-white/5' : 'border-red-500/20 opacity-40 grayscale'}`}>
-                    <img src={t.location_type === 'private' ? IMAGES.privateVault : t.location_type === 'rooftop' ? IMAGES.rooftop : t.location_type === 'window' ? IMAGES.window : t.location_type === 'balcony' ? IMAGES.balcony : IMAGES.interior} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" alt={t.table_number} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                    <div className="absolute inset-0 flex flex-col justify-end p-6 text-left">
-                      <span className="text-[#D4AF37] text-[10px] font-bold tracking-widest mb-1">{t.location_type.toUpperCase()}</span>
-                      <h3 className="text-xl font-serif italic mb-1">Asset {t.table_number}</h3>
-                      <p className="text-white/40 text-[10px] mb-4">{t.capacity} Guests • {t.is_available ? 'Available' : 'Reserved'}</p>
-                      <div className="w-8 h-8 border border-white/20 rounded-full flex items-center justify-center group-hover:bg-[#D4AF37] group-hover:text-black group-hover:border-[#D4AF37] transition-all">{t.is_available ? <ArrowRight size={14} /> : <X size={14} />}</div>
+            </motion.section>
+          )}
+{/* STEP 2: EVENT */}
+{step === 2 && currentUser && (
+  <motion.section key="step2" {...fadeUp} className="w-full max-w-5xl text-left">
+    <SectionHeading 
+      step={1} 
+      title={`Greetings, ${currentUser?.full_name?.split(' ')[0] || 'Patron'}.`} 
+      subtitle="Tell us, what is the special event you are planning to organize, so we may curate the appropriate atmosphere?" 
+    />
+              />              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-16">
+                {EVENT_TYPES.map(type => (
+                  <motion.div whileHover={{ y: -10 }} key={type.id} onClick={() => { updateManifest('eventType', type.label); setStep(3); }} className={`relative aspect-[4/5] rounded-[40px] border cursor-pointer overflow-hidden group transition-all ${manifest.eventType === type.label ? 'border-[#D4AF37] shadow-[0_0_30px_rgba(212,175,55,0.2)]' : 'border-white/5'}`}>
+                    <img src={type.img} alt={type.label} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-80 transition-all duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                    <div className="absolute bottom-10 left-10 text-left">
+                      <div className="text-[#D4AF37] mb-4">{type.icon}</div>
+                      <h3 className="text-2xl font-serif italic text-white leading-none">{type.label}</h3>
                     </div>
                   </motion.div>
                 ))}
+                <motion.div whileHover={{ scale: 1.02 }} className="relative aspect-[4/5] rounded-[40px] border border-white/10 hover:border-white/30 bg-[#0A0A0A] flex flex-col p-8 justify-end transition-all text-left">
+                  <Plus className="mb-4 text-gray-500" size={24} /><h3 className="text-2xl font-serif text-white mb-2">Custom Protocol</h3>
+                  <input type="text" placeholder="Describe Event..." value={manifest.customEvent} onChange={(e) => updateManifest('customEvent', e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { updateManifest('eventType', manifest.customEvent); setStep(3); } }} className="bg-transparent border-b border-white/20 text-sm text-[#D4AF37] outline-none pb-2 placeholder-gray-600 focus:border-[#D4AF37]" />
+                </motion.div>
               </div>
-            </PageTransition>
+            </motion.section>
           )}
-          {step === 'protocols' && selectedTable && (
-            <PageTransition key="protocols">
-              <div className="max-w-2xl mx-auto w-full">
-                <button onClick={() => setStep('selection')} className="text-white/30 hover:text-white flex items-center gap-2 mb-10 transition-colors"><ArrowLeft size={14} /> <span className="text-[10px] font-bold uppercase tracking-widest">Back to Assets</span></button>
-                <header className="mb-12 text-left">
-                  <h2 className="text-5xl font-serif italic mb-4">Luxury Protocols</h2>
-                  <p className="text-white/40 font-light leading-relaxed">Customize your arrival at {selectedRestaurant.name}. Every detail is handled with absolute discretion.</p>
-                </header>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-left">
-                    <span className="text-[8px] text-[#D4AF37] tracking-widest uppercase mb-2 block">Schedule</span>
-                    <select className="bg-transparent text-sm outline-none w-full text-white" value={bookingDate} onChange={e => setBookingDate(e.target.value)}>
-                      <option value="today">Today</option><option value="tomorrow">Tomorrow</option>
-                    </select>
-                  </div>
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-left">
-                    <span className="text-[8px] text-[#D4AF37] tracking-widest uppercase mb-2 block">Arrival</span>
-                    <select className="bg-transparent text-sm outline-none w-full text-white" value={bookingTime} onChange={e => setBookingTime(e.target.value)}>
-                      <option value="19:30">19:30</option><option value="20:00">20:00</option><option value="20:30">20:30</option><option value="21:00">21:00</option>
-                    </select>
+
+          {/* STEP 3: COORDINATES & CAPACITY */}
+          {step === 3 && (
+            <motion.section key="step3" {...fadeUp} className="w-full max-w-2xl text-left">
+              <button onClick={() => setStep(2)} className="text-white/20 hover:text-white mb-12 flex items-center gap-2 text-[10px] tracking-widest font-bold"><ArrowLeft size={14}/> RE-ORDER INTENT</button>
+              <SectionHeading step={2} title="Coordinates & Capacity." subtitle="Establish the location and exact guest count for spatial blueprinting." />
+              <div className="space-y-10 mt-16">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-[#BF953F] to-[#B38728] rounded-full blur opacity-20 group-focus-within:opacity-50 transition duration-1000" />
+                  <div className="relative bg-black/80 backdrop-blur-xl border border-white/10 rounded-full flex items-center px-8 py-6 shadow-2xl">
+                    <MapPin className="text-[#D4AF37] mr-4" size={24} />
+                    <input type="text" placeholder="Enter Imperial Coordinate..." value={manifest.location} onChange={(e) => updateManifest('location', e.target.value)} className="w-full bg-transparent border-none text-xl text-white outline-none placeholder-gray-600" />
+                    <button onClick={() => updateManifest('location', 'Bandra West, Mumbai')} className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-bold text-gray-400 hover:text-[#D4AF37] ml-4 bg-white/5 px-6 py-3 rounded-full whitespace-nowrap"><LocateFixed size={14}/> Detect</button>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div onClick={() => setProtocols(p => ({...p, ghostPay: !p.ghostPay}))} className={`p-6 rounded-[24px] border transition-all cursor-pointer flex justify-between items-center ${protocols.ghostPay ? 'bg-[#D4AF37]/5 border-[#D4AF37]' : 'bg-white/5 border-white/5'}`}>
-                    <div className="flex gap-4 items-center">
-                      <CreditCard size={20} className={protocols.ghostPay ? 'text-[#D4AF37]' : 'text-white/20'} />
-                      <div className="text-left">
-                        <h4 className="font-bold tracking-widest uppercase text-[10px] mb-0.5">Ghost Pay Protocol</h4>
-                        <p className="text-[9px] text-white/40 uppercase tracking-wider">Discreet settlement prior to arrival</p>
+                <div className="bg-black/60 backdrop-blur-md rounded-[40px] border border-white/10 p-10 shadow-xl">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-8 flex items-center gap-3"><Users size={18} className="text-[#D4AF37]"/> Guest Capacity Protocol</h3>
+                  <AnimatePresence mode="wait">
+                    {!manifest.dynamicCapacity ? (
+                      <motion.div key="manual" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="space-y-8">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#050505] p-6 rounded-[30px] border border-white/5">
+                          <div className="text-left">
+                            <span className="text-lg font-serif text-white block">Fixed Headcount</span>
+                            <span className="text-[9px] text-gray-500 uppercase tracking-widest">Seal specific number of patrons</span>
+                          </div>
+                          <div className="flex items-center gap-8 bg-white/5 p-3 rounded-full border border-white/5">
+                            <button onClick={() => updateManifest('guests', Math.max(1, manifest.guests - 1))} className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-2xl text-white transition-all shadow-inner">-</button>
+                            <span className="w-8 text-center font-bold text-3xl text-white font-serif">{manifest.guests}</span>
+                            <button onClick={() => updateManifest('guests', manifest.guests + 1)} className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-2xl text-white transition-all shadow-inner">+</button>
+                          </div>
+                        </div>
+                        <button onClick={() => updateManifest('dynamicCapacity', true)} className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.4em] text-[#D4AF37] hover:text-white transition-colors bg-[#D4AF37]/5 px-8 py-4 rounded-full border border-[#D4AF37]/20 w-full justify-center">SKIP & DISPATCH LATER</button>
+                      </motion.div>
+                    ) : (
+                      <motion.div key="dynamic" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="space-y-6">
+                         <div className="flex items-center justify-between bg-[#111] p-6 rounded-[30px] border border-[#D4AF37]/40 shadow-2xl">
+                           <div className="flex items-center gap-4 text-left"><div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 flex items-center justify-center text-[#D4AF37]"><CheckCircle2 size={24}/></div><div><span className="text-sm text-[#D4AF37] font-bold block tracking-[0.3em] uppercase leading-none mb-1">Dynamic Dispatch Active</span><span className="text-[9px] text-gray-400 uppercase tracking-widest">Headcount currently bypassed</span></div></div>
+                           <button onClick={() => updateManifest('dynamicCapacity', false)} className="text-[9px] uppercase tracking-widest text-gray-500 hover:text-white underline underline-offset-8">Revert to Fixed</button>
+                         </div>
+                         <p className="text-[11px] text-gray-500 leading-relaxed italic border-l-2 border-[#D4AF37] pl-6 py-2">Blueprint will automatically scale based on the exact number of encrypted digital invites dispatched in Phase 07.</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div className="flex justify-end pt-4"><OpusButton disabled={!manifest.location} onClick={() => setStep(4)}>Analyze Availability <ArrowRight size={14}/></OpusButton></div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* STEP 4: VENUE SELECTION */}
+          {step === 4 && (
+            <motion.section key="step4" {...fadeUp} className="w-full">
+              <div className="text-left flex justify-between items-end border-b border-white/5 pb-12">
+                <SectionHeading step={3} title="Exclusive Vistas." subtitle={`Curated architectural spaces currently available in ${manifest.location}.`} />
+                <button onClick={() => setStep(3)} className="text-white/20 hover:text-[#D4AF37] mb-12 text-[9px] tracking-widest font-bold uppercase border border-white/10 px-8 py-4 rounded-full">Adjust Coordinate</button>
+              </div>
+              <div className="grid md:grid-cols-3 gap-12 mt-16">
+                {restaurants.map((r, idx) => (
+                  <TiltCard key={r.id}>
+                    <div onClick={() => { updateManifest('venue', r); fetchEstateDetails(r); setStep(5); }} className="group cursor-pointer bg-black rounded-[50px] overflow-hidden border border-white/5 hover:border-[#D4AF37]/30 transition-all flex flex-col h-full shadow-[0_40px_80px_rgba(0,0,0,0.9)] relative">
+                      <div className="relative aspect-[16/11] overflow-hidden m-2 rounded-[40px]">
+                        <img src={getRestaurantImage(idx)} className="absolute inset-0 w-full h-full object-cover filter brightness-50 group-hover:brightness-100 group-hover:scale-110 transition-all duration-[2000ms]" alt={r.name} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                        <div className="absolute top-6 right-6 bg-black/60 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/><span className="text-[9px] uppercase tracking-widest font-bold text-white">Live</span></div>
+                      </div>
+                      <div className="p-10 text-left flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-3 mb-4"><span className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-[0.4em]">{r.city}</span><div className="w-8 h-[1px] bg-[#D4AF37]/30"></div><span className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em]">{r.cuisine_type}</span></div>
+                          <h4 className="text-4xl font-serif italic text-white leading-none mb-6">{r.name}</h4>
+                          <p className="text-[11px] text-white/40 leading-relaxed font-light line-clamp-2 italic">"An unparalleled atmosphere of elite networking and architectural dining."</p>
+                        </div>
+                        <div className="mt-10 pt-8 border-t border-white/5 flex justify-between items-center"><div className="flex items-center gap-2 text-[9px] font-bold tracking-[0.5em] text-[#D4AF37] uppercase">Initiate protocol</div><ArrowRight size={20} className="text-white/20 group-hover:text-[#D4AF37] transition-all" /></div>
+                      </div>
+                    </div>
+                  </TiltCard>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {/* STEP 5: BLUEPRINTS */}
+          {step === 5 && (
+            <motion.section key="step5" {...fadeUp} className="w-full">
+              <div className="text-left flex justify-between items-end border-b border-white/5 pb-12">
+                <SectionHeading step={4} title="Architectural Blueprint." subtitle={`Optimized spatial arrangements for ${manifest.dynamicCapacity ? 'your dynamic guest list' : `${manifest.guests} patrons`}.`} />
+                <button onClick={() => setStep(4)} className="text-white/20 hover:text-[#D4AF37] mb-12 text-[9px] tracking-widest font-bold uppercase border border-white/10 px-8 py-4 rounded-full">Re-evaluate Estate</button>
+              </div>
+              <div className="grid lg:grid-cols-3 gap-10 mt-16">
+                {BLUEPRINTS.map(bp => (
+                  <div key={bp.id} onClick={() => updateManifest('blueprint', bp)} className={`cursor-pointer rounded-[50px] overflow-hidden border transition-all duration-700 bg-black/40 backdrop-blur-md flex flex-col ${manifest.blueprint?.id === bp.id ? 'border-[#D4AF37] shadow-[0_0_50px_rgba(212,175,55,0.15)] transform -translate-y-4' : 'border-white/10 hover:border-white/30'}`}>
+                    <div className="relative h-64 overflow-hidden">
+                      <img src={bp.image} className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-all duration-1000" alt={bp.name} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+                      <div className="absolute bottom-6 left-8"><span className="text-[10px] font-bold uppercase tracking-[0.5em] text-[#D4AF37] bg-black/80 px-4 py-2 rounded-full border border-[#D4AF37]/30">{bp.cap}</span></div>
+                    </div>
+                    <div className="p-10 flex-1 text-left">
+                      <h4 className="font-serif text-3xl text-white mb-4 italic leading-none">{bp.name}</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed font-light italic">"{bp.desc}"</p>
+                    </div>
+                    <div className="p-8 border-t border-white/5 flex justify-between items-center bg-white/5">
+                      <span className="text-[9px] uppercase tracking-[0.6em] text-white/30 font-bold">Secure Zone</span>
+                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${manifest.blueprint?.id === bp.id ? 'border-[#D4AF37] shadow-lg' : 'border-white/10'}`}>{manifest.blueprint?.id === bp.id && <div className="w-4 h-4 bg-[#D4AF37] rounded-full shadow-[0_0_15px_#E6B325]"/>}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-16 flex justify-center"><OpusButton onClick={() => setStep(6)} disabled={!manifest.blueprint} className="!px-24">Lock Architectural Manifest</OpusButton></div>
+            </motion.section>
+          )}
+
+          {/* STEP 6: GASTRONOMY */}
+          {step === 6 && (
+            <motion.section key="step6" {...fadeUp} className="w-full">
+               <div className="text-left flex justify-between items-end border-b border-white/5 pb-12 mb-16">
+                 <SectionHeading step={5} title="Culinary Curation." subtitle="Select from our heritage inventory or defer selection to arrival." />
+                 <div className="flex gap-6 mb-12">
+                   <button onClick={() => setStep(5)} className="text-white/20 hover:text-white text-[10px] tracking-widest font-bold uppercase border border-white/10 px-8 py-4 rounded-full transition-all">Previous Phase</button>
+                   <button onClick={() => { updateManifest('skipMenu', true); setStep(7); }} className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.5em] text-[#D4AF37] hover:text-white bg-[#D4AF37]/10 px-10 py-4 rounded-full border border-[#D4AF37]/30 shadow-2xl transition-all">Defer Selection <SkipForward size={16}/></button>
+                 </div>
+               </div>
+              <div className="flex flex-col lg:grid lg:grid-cols-12 gap-16">
+                <div className="lg:col-span-7 space-y-8 h-[700px] overflow-y-auto pr-8 custom-scrollbar">
+                  <div className="bg-black/40 border border-white/10 rounded-[40px] p-8 flex items-center gap-6 focus-within:border-[#D4AF37]/50 transition-all group">
+                    <PenTool className="text-white/20 group-focus-within:text-[#D4AF37]" size={24} />
+                    <input type="text" placeholder="Request a bespoke off-menu provision..." value={manifest.customDish} onChange={(e) => updateManifest('customDish', e.target.value)} className="w-full bg-transparent text-lg text-white outline-none placeholder-gray-700 italic font-light" />
+                  </div>
+                  {menuItems.map(item => {
+                    const isSelected = manifest.cart.some(i => i.id === item.id);
+                    return (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={item.id} onClick={() => { toggleCartItem(item); updateManifest('skipMenu', false); }} className={`p-8 rounded-[45px] border cursor-pointer flex justify-between items-center transition-all group ${isSelected ? 'bg-[#D4AF37]/5 border-[#D4AF37]/40 shadow-3xl' : 'bg-black/40 border-white/5 hover:border-white/10'}`}>
+                         <div className="flex items-center gap-10 text-left">
+                           <div className="w-24 h-24 rounded-[30px] overflow-hidden border border-white/5 group-hover:border-[#D4AF37]/30 transition-all"><img src={item.price > 2000 ? LOCAL_IMAGES.food : LOCAL_IMAGES.beverage} className={`w-full h-full object-cover transition-all duration-[2000ms] ${isSelected ? 'scale-110 grayscale-0' : 'grayscale opacity-40 group-hover:opacity-100 group-hover:grayscale-0'}`} alt={item.name} /></div>
+                           <div>
+                             <span className="text-[10px] font-bold tracking-[0.5em] uppercase text-[#D4AF37] mb-2 block">{item.category}</span>
+                             <h4 className="text-4xl font-serif text-white italic leading-none group-hover:text-[#D4AF37] transition-all">{item.name}</h4>
+                             <p className="text-[11px] text-white/30 font-light mt-3 max-w-sm line-clamp-1 italic">"{item.description}"</p>
+                           </div>
+                         </div>
+                         <div className="text-right flex items-center gap-12 pr-6">
+                           <span className="text-2xl font-serif text-white font-light italic">₹{item.price.toLocaleString()}</span>
+                           <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-2xl' : 'bg-white/5 border-white/10 text-white/20'}`}>{isSelected ? <CheckCircle2 size={24} /> : <Plus size={20} />}</div>
+                         </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+                <div className="lg:col-span-5 h-fit sticky top-48">
+                  <div className="lotus-panel p-16 space-y-12 bg-black/80 shadow-[0_50px_100px_rgba(0,0,0,0.9)]">
+                    <div className="flex items-center gap-6 text-[#E6B325] border-b border-white/5 pb-10"><Gem size={32}/><h3 className="text-5xl font-serif italic text-white">The Manifest.</h3></div>
+                    <div className="space-y-8 max-h-[300px] overflow-y-auto pr-6 custom-scrollbar">
+                      {manifest.cart.length === 0 && !manifest.customDish ? <p className="text-sm text-white/20 uppercase tracking-[0.6em] text-center py-20 italic">"Registry Empty"</p> : (
+                        manifest.cart.map((item, i) => (
+                          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} key={i} className="flex justify-between items-center group">
+                            <span className="text-[#F4F1EB] text-lg font-light italic leading-none group-hover:text-[#D4AF37] transition-all">"{item.name}"</span>
+                            <div className="flex items-center gap-10">
+                              <span className="text-lg font-bold tracking-widest text-[#D4AF37]/60">₹{item.price.toLocaleString()}</span>
+                              <button onClick={(e) => { e.stopPropagation(); toggleCartItem(item); }} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-[#9B1B30] hover:bg-[#9B1B30] hover:text-white shadow-xl transition-all"><X size={18}/></button>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                    <div className="pt-12 border-t border-white/10 flex justify-between items-end">
+                      <div className="flex flex-col text-left"><span className="text-[11px] text-[#D4AF37] uppercase tracking-[0.8em] font-bold mb-3">Total Estimated Tribute</span><span className="text-6xl font-serif text-[#F4F1EB] glow-text leading-none">₹{cartTotal.toLocaleString()}</span></div>
+                      <OpusButton onClick={() => setStep(7)} disabled={manifest.cart.length === 0 && !manifest.customDish} className="!px-16 !py-8 !text-[11px]">Finalize Curation</OpusButton>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* STEP 7: SETTLEMENT */}
+          {step === 7 && (
+            <motion.section key="step7" {...fadeUp} className="w-full max-w-5xl text-center space-y-24">
+              <div className="space-y-8">
+                <button onClick={() => setStep(6)} className="text-white/20 hover:text-[#D4AF37] mb-12 text-[10px] tracking-[0.6em] font-bold uppercase border border-white/10 px-10 py-5 rounded-full transition-all mx-auto flex items-center gap-3"><ArrowLeft size={16}/> RE-CURATE GASTRONOMY</button>
+                <SectionHeading step={6} title="The Settlement." subtitle="Settle the reservation retainer now. Final adjustments will be processed at the conclusion of the event." />
+              </div>
+              <div className="grid lg:grid-cols-12 gap-20 mt-16 text-left items-start">
+                <div className="lg:col-span-7 space-y-12">
+                  <div className="space-y-10">
+                    {[
+                      { id: 'retainer', label: 'Reservation Retainer Only', desc: 'Secure the venue & spatial blueprint. Balance paid post-event.', amt: RETAINER_FEE },
+                      { id: 'full', label: 'Total Estimated Settlement', desc: 'Includes retainer and pre-ordered provisions.', amt: RETAINER_FEE + cartTotal },
+                    ].map(method => (
+                      <div key={method.id} onClick={() => updateManifest('paymentProtocol', method.id)} className={`p-10 rounded-[45px] border-2 cursor-pointer transition-all duration-700 relative group flex justify-between items-center ${manifest.paymentProtocol === method.id ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[0_0_60px_rgba(212,175,55,0.1)]' : 'border-white/5 bg-black/40 hover:border-white/20'}`}>
+                        <div className="space-y-3">
+                          <span className="text-2xl font-serif italic text-white group-hover:text-[#D4AF37] transition-all">{method.label}</span>
+                          <p className="text-[11px] text-white/30 uppercase tracking-[0.4em] font-bold">{method.desc}</p>
+                          <span className="text-4xl font-serif text-[#D4AF37] block mt-6">₹{method.amt.toLocaleString()}</span>
+                        </div>
+                        <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${manifest.paymentProtocol === method.id ? 'border-[#D4AF37] shadow-xl' : 'border-white/10'}`}>{manifest.paymentProtocol === method.id && <div className="w-6 h-6 bg-[#D4AF37] rounded-full shadow-[0_0_20px_#E6B325]"/>}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-10 items-center pl-10 border-l-2 border-white/5">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.8em] text-[#D4AF37]">Method:</span>
+                    <button className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-4 hover:text-[#D4AF37] transition-all"><CreditCard size={20}/> BLACK CARD</button>
+                    <div className="w-1 h-1 rounded-full bg-white/20" />
+                    <button className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-4 hover:text-[#D4AF37] transition-all"><Smartphone size={20}/> ENCRYPTED UPI</button>
+                  </div>
+                </div>
+                <div className="lg:col-span-5 lotus-panel p-16 space-y-12 bg-black/80 shadow-3xl relative">
+                  <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent"></div>
+                  <h3 className="text-3xl font-serif italic text-[#F4F1EB] border-b border-white/5 pb-8">Decree Summary</h3>
+                  <div className="space-y-8">
+                    {[
+                      { l: 'Patron', v: currentUser?.full_name },
+                      { l: 'Estate', v: manifest.venue?.name },
+                      { l: 'Blueprint', v: manifest.blueprint?.name },
+                      { l: 'Capacity', v: manifest.dynamicCapacity ? 'Dynamic Protocol' : `${manifest.guests} Patrons` },
+                      { l: 'Intent', v: manifest.eventType },
+                    ].map((row, i) => (
+                      <div key={i} className="flex justify-between items-center"><span className="text-[10px] uppercase tracking-[0.6em] text-white/30 font-bold">{row.l}</span><span className="text-lg font-serif italic text-[#F4F1EB]">{row.v}</span></div>
+                    ))}
+                    <div className="pt-12 mt-12 border-t border-white/5 flex justify-between items-end"><div className="flex flex-col"><span className="text-[11px] uppercase tracking-[0.8em] text-[#D4AF37] font-bold mb-2">Due Now</span><span className="text-6xl font-serif text-[#F4F1EB] glow-text leading-none">₹{settlementAmount.toLocaleString()}</span></div></div>
+                  </div>
+                  <OpusButton onClick={() => setStep(8)} disabled={loading} className="w-full !py-10 !rounded-[35px] !text-[11px] !tracking-[1em] !mt-12">{loading ? 'ENCRYPTING...' : 'AFFIX ROYAL SEAL'}</OpusButton>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* STEP 8: INVITES */}
+          {step === 8 && (
+            <motion.section key="step8" {...fadeUp} className="w-full max-w-5xl mx-auto text-left">
+              <SectionHeading step={7} title="Guest Accession." subtitle="Generate secure, encrypted digital invitations. Only patrons on this manifest will be granted entry." />
+              <div className="grid lg:grid-cols-12 gap-20 mt-20">
+                <div className="lg:col-span-7 space-y-12">
+                  <div className="lotus-panel p-12 space-y-10 bg-black/40 border-white/10 shadow-2xl">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.6em] text-[#D4AF37] flex items-center gap-4"><Mail size={20}/> Add Guest to Protocol</h3>
+                    <div className="space-y-6">
+                      <input type="text" placeholder="Guest Full Legal Name" value={manifest.newGuestName} onChange={(e)=>updateManifest('newGuestName',e.target.value)} className="w-full bg-black/60 border border-white/5 rounded-2xl py-6 px-8 text-lg text-white focus:border-[#D4AF37] transition-all outline-none font-serif italic" />
+                      <div className="flex gap-6">
+                        <input type="email" placeholder="Encrypted Email Link" value={manifest.newGuestEmail} onChange={(e)=>updateManifest('newGuestEmail',e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')handleAddGuest();}} className="w-full bg-black/60 border border-white/5 rounded-2xl py-6 px-8 text-lg text-white focus:border-[#D4AF37] transition-all outline-none" />
+                        <button onClick={handleAddGuest} className="bg-[#D4AF37] text-black px-10 rounded-2xl hover:bg-white transition-all font-black text-2xl shadow-2xl">+</button>
                       </div>
                     </div>
                   </div>
-                  <div onClick={() => setProtocols(p => ({...p, surprise: !p.surprise}))} className={`p-6 rounded-[24px] border transition-all cursor-pointer flex justify-between items-center ${protocols.surprise ? 'bg-[#D4AF37]/5 border-[#D4AF37]' : 'bg-white/5 border-white/5'}`}>
-                    <div className="flex gap-4 items-center">
-                      <BellOff size={20} className={protocols.surprise ? 'text-[#D4AF37]' : 'text-white/20'} />
-                      <div className="text-left">
-                        <h4 className="font-bold tracking-widest uppercase text-[10px] mb-0.5">Surprise Seating</h4>
-                        <p className="text-[9px] text-white/40 uppercase tracking-wider">Private notification protocol</p>
-                      </div>
-                    </div>
+                  <div className="space-y-6 max-h-[400px] overflow-y-auto pr-6 custom-scrollbar">
+                    <h3 className="text-[11px] uppercase tracking-[0.8em] text-white/20 font-bold ml-4">Current Protocol Manifest ({manifest.guestInvites.length} {manifest.dynamicCapacity ? 'Created' : `/ ${manifest.guests}`})</h3>
+                    {manifest.guestInvites.length === 0 ? (
+                      <div className="py-24 rounded-[40px] border-2 border-dashed border-white/5 text-center text-sm text-white/10 uppercase tracking-[1em] italic font-light">"No Patrons Identified"</div>
+                    ) : (
+                      manifest.guestInvites.map((g, idx) => (
+                        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} key={idx} className="p-8 rounded-[35px] bg-[#0A0A0A] border border-white/5 flex flex-col gap-6 shadow-3xl hover:border-[#D4AF37]/30 transition-all group">
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex gap-8 items-center">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#BF953F] to-[#B38728] flex items-center justify-center text-black font-black text-xs">{g.name[0]}</div>
+                              <div>
+                                <p className="text-2xl font-serif text-white italic leading-none mb-2">{g.name}</p>
+                                <p className="text-[10px] text-gray-500 tracking-[0.3em] font-bold uppercase">{g.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-6">
+                              <span className="text-[9px] text-[#D4AF37] font-bold uppercase tracking-widest opacity-40 group-hover:opacity-100 transition-all">Token Verified</span>
+                              <CheckCircle2 size={24} className="text-green-500/40" />
+                            </div>
+                          </div>
+                          
+                          {/* Visual Token Representation */}
+                          <div className="bg-black/60 p-4 rounded-2xl flex items-center justify-between border border-white/5">
+                            <div className="flex items-center gap-4">
+                              <QrCode size={32} className="text-[#D4AF37] opacity-40" />
+                              <code className="text-[10px] text-[#D4AF37] tracking-[0.2em] font-bold">{g.token}</code>
+                            </div>
+                            <span className="text-[8px] text-white/20 uppercase tracking-[0.4em] font-black">Encrypted Access</span>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
                   </div>
                 </div>
-                <GoldButton className="w-full mt-10 py-5" onClick={() => setStep('manifest')}>Review Manifest <ChevronRight size={18} /></GoldButton>
-              </div>
-            </PageTransition>
-          )}
-          {step === 'manifest' && selectedTable && (
-            <PageTransition key="manifest">
-              <div className="max-w-md mx-auto relative w-full">
-                <div className="absolute -inset-10 bg-[#D4AF37]/10 blur-[100px] pointer-events-none rounded-full" />
-                <div className="relative bg-[#111112] border border-white/10 rounded-[40px] p-10 shadow-3xl text-center overflow-hidden">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
-                  <div className="w-16 h-16 border border-[#D4AF37] rounded-full flex items-center justify-center mx-auto mb-8 text-[#D4AF37]"><Award size={28} /></div>
-                  <h2 className="text-3xl font-serif italic mb-2">Final Manifest</h2>
-                  <p className="text-[10px] text-[#D4AF37] font-bold tracking-[0.4em] uppercase mb-10">Verification Pending</p>
-                  <div className="space-y-4 text-left mb-10">
-                    <div className="flex justify-between border-b border-white/5 pb-4"><span className="text-[9px] text-white/30 uppercase tracking-widest">Venue</span><span className="text-xs italic font-serif">{selectedRestaurant.name}</span></div>
-                    <div className="flex justify-between border-b border-white/5 pb-4"><span className="text-[9px] text-white/30 uppercase tracking-widest">Asset</span><span className="text-xs font-serif italic">Table {selectedTable.table_number} ({selectedTable.location_type})</span></div>
-                    <div className="flex justify-between border-b border-white/5 pb-4"><span className="text-[9px] text-white/30 uppercase tracking-widest">Schedule</span><span className="text-xs uppercase tracking-wider">{bookingDate} • {bookingTime}</span></div>
+                <div className="lg:col-span-5">
+                  <div className="bg-gradient-to-b from-[#111] to-[#020202] p-16 rounded-[60px] border border-white/5 shadow-[0_60px_120px_rgba(0,0,0,1)] text-center sticky top-48 overflow-hidden group">
+                    <div className="absolute -inset-10 bg-[#D4AF37]/5 blur-[80px] group-hover:bg-[#D4AF37]/10 transition-all duration-1000"></div>
+                    <QrCode className="mx-auto text-[#D4AF37] mb-10 drop-shadow-[0_0_20px_rgba(212,175,55,0.4)]" size={80} />
+                    <h3 className="text-4xl font-serif italic text-white mb-4">Dispatch Invites.</h3>
+                    <p className="text-[11px] text-white/30 tracking-[0.5em] leading-relaxed mb-12 uppercase font-bold">Encrypting & Generating dynamic <br/> QR tokens for {manifest.guestInvites.length} patrons.</p>
+                    <OpusButton onClick={handleFinalizeManifest} className="w-full !py-10 !text-[11px] !tracking-[1em] !rounded-[35px] shadow-3xl">LOCK & DISPATCH PROTOCOL</OpusButton>
                   </div>
-                  <GoldButton className="w-full" onClick={handleCreateBooking} disabled={loading}>{loading ? 'Processing...' : 'Confirm Digital Key'}</GoldButton>
                 </div>
               </div>
-            </PageTransition>
+            </motion.section>
           )}
-          {step === 'success' && (
-            <PageTransition key="success">
-              <div className="max-w-md mx-auto w-full text-center">
-                <div className="w-24 h-24 bg-[#D4AF37] rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(212,175,55,0.4)]"><CheckCircle size={48} className="text-black" /></div>
-                <h2 className="text-5xl font-serif italic mb-4">Access Granted.</h2>
-                <p className="text-white/40 text-sm leading-loose mb-10">Your reservation manifest is encrypted. Your digital key is now active in the archive.</p>
-                <div className="flex gap-4">
-                  <GoldButton className="flex-1" onClick={() => { setView('reservations'); setStep('discovery'); }}>Archive</GoldButton>
-                  <GoldButton variant="outline" className="flex-1" onClick={resetFlow}>Home</GoldButton>
-                </div>
+
+          {/* STEP 9: FINAL DASHBOARD */}
+          {step === 9 && (
+            <motion.section key="step9" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-2xl mx-auto text-center relative">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#D4AF37]/5 blur-[150px] pointer-events-none rounded-full"></div>
+              <OpusLogo className="w-48 h-48 mx-auto mb-16 relative z-10 p-4" />
+              <h2 className="text-[100px] font-serif mb-8 text-[#F4F1EB] leading-none glow-text">Manifest <span className="italic text-[#9B1B30] font-light">Secured.</span></h2>
+              <p className="text-white/40 text-3xl leading-relaxed mb-20 max-w-xl mx-auto font-light italic italic">"The imperial manifest has been locked. Your guests have received their encrypted tokens. The high concierge awaits."</p>
+              <div className="lotus-panel p-16 bg-black/80 shadow-3xl relative z-10 border-[#D4AF37]/20">
+                 <div className="flex justify-between items-end border-b border-white/5 pb-10 mb-10">
+                    <div className="text-left space-y-2"><span className="text-[11px] font-bold uppercase tracking-[0.8em] text-[#D4AF37]">Final Settlement</span><h3 className="text-4xl font-serif italic text-white">The Treasury Ledger</h3></div>
+                    <span className="text-[9px] text-white/20 uppercase tracking-[0.4em] font-black">Status: Partially Settle</span>
+                 </div>
+                 <div className="space-y-6 text-left mb-12">
+                    <div className="flex justify-between items-center text-sm font-light italic"><span className="text-white/40">Retainer Authenticated</span><span className="text-[#D4AF37] font-bold">- ₹{RETAINER_FEE.toLocaleString()}</span></div>
+                    <div className="flex justify-between items-center text-sm font-light italic"><span className="text-white/40">Curation Total (Inc. On-site)</span><span className="text-white font-bold">₹85,000</span></div>
+                    <div className="flex justify-between items-end border-t border-white/10 pt-8 mt-4"><span className="text-xs font-bold text-[#D4AF37] uppercase tracking-[0.8em]">Balance to Settle</span><span className="text-5xl font-serif text-white glow-text">₹70,000</span></div>
+                 </div>
+                 <button onClick={() => window.location.reload()} className="btn-gold w-full py-10 rounded-full text-[11px] tracking-[1em] shadow-[0_0_50px_rgba(212,175,55,0.3)] hover:scale-105 transition-all">RETURN TO CHRONICLES</button>
               </div>
-            </PageTransition>
+            </motion.section>
           )}
-          {view === 'reservations' && (
-            <PageTransition key="reservations">
-              <div className="w-full max-w-4xl">
-                <header className="flex justify-between items-end mb-12 text-left">
-                  <div><span className="text-[#D4AF37] text-xs font-bold uppercase tracking-[0.4em]">Dashboard</span><h2 className="text-6xl font-serif italic mt-4 leading-tight text-white">Your <br/> Archive.</h2></div>
-                  <GoldButton variant="outline" onClick={() => { setView('main'); setStep('discovery'); }}><ArrowLeft size={14} /> Back</GoldButton>
-                </header>
-                <div className="space-y-6">
-                  {myBookings.length === 0 ? (
-                    <div className="text-center py-20 border border-white/5 rounded-[40px]"><p className="text-white/20 uppercase tracking-[0.3em] text-[10px]">No active manifests found</p></div>
-                  ) : (
-                    myBookings.map(b => (
-                      <div key={b.id} className="bg-[#111112] border border-white/10 p-8 rounded-[40px] flex flex-col md:flex-row justify-between items-center gap-8 text-left">
-                        <div className="flex gap-8 items-center">
-                          <div className="text-center px-6 py-4 border-r border-white/10"><span className="block text-2xl font-serif italic text-[#D4AF37]">{new Date(b.booking_date).getDate()}</span><span className="block text-[8px] uppercase tracking-widest text-white/30">{new Date(b.booking_date).toLocaleString('en', { month: 'short' })}</span></div>
-                          <div><h4 className="text-2xl font-serif italic text-white">{b.restaurant_name}</h4><p className="text-[10px] text-white/40 uppercase tracking-widest">{b.city} • Asset {b.table_number}</p></div>
-                        </div>
-                        <div className="flex items-center gap-8">
-                          <div className="text-right"><span className={`text-[9px] uppercase tracking-[0.2em] font-bold ${b.status === 'confirmed' ? 'text-green-500' : 'text-[#D4AF37]'}`}>{b.status}</span><p className="text-[10px] text-white/20 mt-1 uppercase tracking-widest">Protocol Active</p></div>
-                          <button onClick={() => handleCancelBooking(b.id)} className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-red-500/10 hover:border-red-500/30 text-white/20 hover:text-red-500 transition-all"><X size={16} /></button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </PageTransition>
-          )}
-          {!currentUser && step !== 'discovery' && view === 'main' && <AuthView />}
+
         </AnimatePresence>
-      </div>
-      <footer className="fixed bottom-8 w-full px-12 flex justify-between items-center text-[9px] font-bold text-white/20 tracking-[0.3em] uppercase"><span>EST. 2024</span><div className="flex gap-8"><span className="hover:text-white transition-colors cursor-pointer">Protocol terms</span><span className="hover:text-white transition-colors cursor-pointer">Encryption</span><span className="hover:text-white transition-colors cursor-pointer">Concierge</span></div></footer>
+      </main>
+
+      <footer className="fixed bottom-0 w-full px-16 py-8 flex justify-between items-center text-[10px] font-bold text-white/20 tracking-[0.8em] uppercase bg-[#020202]/80 backdrop-blur-3xl border-t border-white/5 z-50">
+        <span>IMPERIAL SOVEREIGN PROTOCOL EST. 2024</span>
+        <div className="flex gap-20">
+          <span className="hover:text-[#D4AF37] transition-all cursor-pointer">The Decrees</span>
+          <span className="hover:text-[#D4AF37] transition-all cursor-pointer">Treasury</span>
+          <span className="hover:text-[#D4AF37] transition-all cursor-pointer">The High Court</span>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function RootApp() {
-  return (
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  );
-}
-
+function RootApp() { return ( <ErrorBoundary> <App /> </ErrorBoundary> ); }
 export default RootApp;

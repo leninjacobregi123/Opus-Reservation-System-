@@ -1,17 +1,16 @@
 /* 
-  BOOK MY SEAT - Premium Design System
-  Utility & Aesthetic Tokens
+  OPUS DINING - Sovereign 3D Design System
+  Metallic Gold, Obsidian, and Glassmorphism
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Montserrat:wght@300;400;600&display=swap');
 
 :root {
-  --gold: #D4AF37;
-  --black: #070708;
-  --dark-grey: #111112;
-  --white-40: rgba(255, 255, 255, 0.4);
-  --white-10: rgba(255, 255, 255, 0.1);
-  --white-5: rgba(255, 255, 255, 0.05);
+  --gold-metallic: linear-gradient(135deg, #BF953F 0%, #FCF6BA 50%, #B38728 100%);
+  --obsidian: #020202;
+  --panel-bg: #0A0A0A;
+  --white-soft: #F4F1EB;
+  --ruby: #9B1B30;
 }
 
 * {
@@ -21,99 +20,84 @@
 }
 
 body {
-  background-color: var(--black);
-  color: white;
-  font-family: 'Inter', sans-serif;
+  background-color: var(--obsidian);
+  color: var(--white-soft);
+  font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
 h1, h2, h3, h4, .font-serif {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cormorant Garamond', serif;
 }
 
 /* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
-
-::-webkit-scrollbar-track {
-  background: var(--black);
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.02);
 }
-
-::-webkit-scrollbar-thumb {
-  background: var(--white-10);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #BF953F;
   border-radius: 10px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gold);
+/* 3D Glass Panel */
+.lotus-panel {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 40px;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Glassmorphism Classes */
-.glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--white-10);
+.btn-gold {
+  background: var(--gold-metallic);
+  color: black;
+  font-weight: 700;
+  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  border: none;
 }
 
-/* Animation Utilities */
-.hover-gold:hover {
-  color: var(--gold);
-  transition: color 0.3s ease;
+.btn-gold:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(191, 149, 63, 0.3);
 }
 
-/* Aspect Ratio Helpers (Replacing Tailwind Plugin) */
-.aspect-\[4\/3\] {
-  aspect-ratio: 4 / 3;
-}
-.aspect-\[4\/5\] {
-  aspect-ratio: 4 / 5;
-}
-.aspect-\[3\/4\] {
-  aspect-ratio: 3 / 4;
+.glow-text {
+  text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
 }
 
-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  object-fit: cover;
+/* Mandala Pulsing Aura */
+.mandala-node {
+  position: relative;
 }
-
-/* Ensure images fill their containers */
-.relative.overflow-hidden img {
-  width: 100%;
-  height: 100%;
-}
-
-/* Loader */
-.loading-fullscreen {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--black);
-  z-index: 1000;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--white-10);
-  border-top-color: var(--gold);
+.mandala-node::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: rotate 30s linear infinite;
 }
 
-@keyframes spin {
+@keyframes rotate {
+  from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* Input Overrides */
-select option {
-  background: var(--dark-grey);
-  color: white;
+/* Aspect Ratio Helpers */
+.aspect-\[4\/3\] { aspect-ratio: 4 / 3; }
+.aspect-\[4\/5\] { aspect-ratio: 4 / 5; }
+.aspect-\[3\/4\] { aspect-ratio: 3 / 4; }
+.aspect-\[16\/11\] { aspect-ratio: 16 / 11; }
+.aspect-\[16\/10\] { aspect-ratio: 16 / 10; }
+
+.shadow-3xl {
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.7);
+}
+
+input {
+  outline: none;
 }
