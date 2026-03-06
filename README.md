@@ -1,4 +1,4 @@
-# Opus Dining - Premium Restaurant Reservation System
+# Opus Dining -  Restaurant Reservation System
 
 Opus Dining is a high-end, full-stack restaurant reservation platform designed for exclusive architectural dining experiences. It provides a robust, fail-proof booking engine with a sophisticated, luxury-focused user interface.
 
@@ -13,7 +13,7 @@ Opus Dining is a high-end, full-stack restaurant reservation platform designed f
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ```mermaid
 graph TD
@@ -40,7 +40,7 @@ graph TD
 
 ---
 
-## 🔄 Booking Workflow
+## Booking Workflow
 
 ```mermaid
 sequenceDiagram
@@ -77,7 +77,7 @@ sequenceDiagram
 
 ---
 
-## 🚀 Getting Started (Local Development)
+## Getting Started (Local Development)
 
 ### Prerequisites
 - Node.js (v18+)
@@ -111,7 +111,7 @@ npm start
 
 ---
 
-## 🧪 Testing & Diagnostics
+## Testing & Diagnostics
 
 The project includes Python-based stress testing scripts to verify logical constraints and server load capacity.
 
@@ -140,7 +140,7 @@ python scripts/load_test.py
 
 ---
 
-## 📂 Directory Structure
+##  Directory Structure
 
 ```text
 ├── backend/                # Node.js/Express API
@@ -168,13 +168,15 @@ python scripts/load_test.py
 
 ---
 
-## 🛡️ Security Posture
+## Security Posture
 
 - **Password Hashing:** Passwords are mathematically salted and hashed via `bcryptjs` before entering the database.
 - **Stateless Sessions:** User sessions are managed via short-lived JWT (JSON Web Tokens).
 - **CORS Restricted:** API access is strictly limited to authorized frontend domains via environment variables.
 - **SQL Injection Prevention:** Parameterized queries are used universally across all SQLite operations.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
+
+made with love for the community 
