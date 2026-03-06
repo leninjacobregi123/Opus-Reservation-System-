@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend/database:/app/database
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=change_this_secret_key_123456
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - REACT_APP_API_URL=http://localhost:5001/api
+    ports:
+      - "80:80"
+    depends_on:
+      - backend

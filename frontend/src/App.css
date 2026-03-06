@@ -1,124 +1,119 @@
-/* App.css */
-body {
+/* 
+  BOOK MY SEAT - Premium Design System
+  Utility & Aesthetic Tokens
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+  --gold: #D4AF37;
+  --black: #070708;
+  --dark-grey: #111112;
+  --white-40: rgba(255, 255, 255, 0.4);
+  --white-10: rgba(255, 255, 255, 0.1);
+  --white-5: rgba(255, 255, 255, 0.05);
+}
+
+* {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f3f4f6;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.app-container {
-  padding: 2rem;
-  min-height: 100vh;
+body {
+  background-color: var(--black);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 2rem;
+h1, h2, h3, h4, .font-serif {
+  font-family: 'Playfair Display', serif;
 }
 
-.header h1 {
-  font-size: 2.5rem;
-  color: #2d3748;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-.message {
-  color: #2563eb;
-  margin-top: 0.5rem;
+::-webkit-scrollbar-track {
+  background: var(--black);
 }
 
-.loading-text {
-  text-align: center;
-  font-size: 1.2rem;
-  color: #6b7280;
+::-webkit-scrollbar-thumb {
+  background: var(--white-10);
+  border-radius: 10px;
 }
 
-.seat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 1rem;
-  max-width: 1100px;
-  margin: auto;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
 }
 
-.seat-card {
-  background-color: #fff;
-  padding: 1rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  text-align: center;
+/* Glassmorphism Classes */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--white-10);
 }
 
-.seat-card.available {
-  border: 2px solid #10b981;
+/* Animation Utilities */
+.hover-gold:hover {
+  color: var(--gold);
+  transition: color 0.3s ease;
 }
 
-.seat-card.available:hover {
-  background-color: #ecfdf5;
+/* Aspect Ratio Helpers (Replacing Tailwind Plugin) */
+.aspect-\[4\/3\] {
+  aspect-ratio: 4 / 3;
+}
+.aspect-\[4\/5\] {
+  aspect-ratio: 4 / 5;
+}
+.aspect-\[3\/4\] {
+  aspect-ratio: 3 / 4;
 }
 
-.seat-card.reserved {
-  background-color: #fecaca;
-  cursor: not-allowed;
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
 }
 
-.modal-overlay {
+/* Ensure images fill their containers */
+.relative.overflow-hidden img {
+  width: 100%;
+  height: 100%;
+}
+
+/* Loader */
+.loading-fullscreen {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  background: var(--black);
+  z-index: 1000;
 }
 
-.modal {
-  background-color: white;
-  padding: 2rem;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--white-10);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.modal input {
-  width: 100%;
-  padding: 0.75rem;
-  margin: 1rem 0;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 1rem;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.modal-buttons {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.cancel-btn,
-.confirm-btn {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.cancel-btn {
-  background-color: #e5e7eb;
-  color: #374151;
-}
-
-.cancel-btn:hover {
-  background-color: #d1d5db;
-}
-
-.confirm-btn {
-  background-color: #2563eb;
+/* Input Overrides */
+select option {
+  background: var(--dark-grey);
   color: white;
-}
-
-.confirm-btn:hover {
-  background-color: #1d4ed8;
 }
