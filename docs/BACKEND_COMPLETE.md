@@ -171,7 +171,7 @@ Your professional restaurant booking platform backend is **100% COMPLETE** and r
 ### Start Backend Server
 
 ```bash
-cd /home/lenin/Book-my-seat-/backend-new
+cd /home/lenin/Opus/backend
 npm start
 ```
 

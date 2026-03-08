@@ -3,11 +3,14 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const { initDatabase } = require('./config/database');
 const config = require('./config/config');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { initNotification } = require('./utils/notification');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -15,8 +18,19 @@ const restaurantRoutes = require('./routes/restaurantRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const tableRoutes = require('./routes/tableRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: '*', // For development
+    methods: ['GET', 'POST']
+  }
+});
+initNotification(io);
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -42,7 +56,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes('*') || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -63,7 +76,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: '🎟️ Welcome to Book My Seat API',
+    message: '🎟️ Welcome to Opus Dining API (Sovereign Concierge Protocol)',
     version: '2.0.0',
     endpoints: {
       auth: '/api/auth',
@@ -80,6 +93,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/tables', tableRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Error handling
 app.use(notFound);
@@ -90,9 +104,9 @@ const startServer = async () => {
   try {
     await initDatabase();
 
-    app.listen(config.PORT, () => {
+    server.listen(config.PORT, () => {
       console.log('\n' + '='.repeat(50));
-      console.log('🚀 Book My Seat API Server');
+      console.log('🚀 Opus Dining API Server');
       console.log('='.repeat(50));
       console.log(`✅ Server running on: http://localhost:${config.PORT}`);
       console.log(`✅ Environment: ${config.NODE_ENV}`);

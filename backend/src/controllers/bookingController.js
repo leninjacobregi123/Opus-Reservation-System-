@@ -1,5 +1,6 @@
 const { db } = require('../config/database');
 const { BOOKING_STATUS } = require('../config/constants');
+const { sendNotification } = require('../utils/notification');
 
 // Create new booking
 const createBooking = (req, res) => {
@@ -43,10 +44,21 @@ const createBooking = (req, res) => {
         return res.status(500).json({ success: false, message: 'Failed to create booking', error: err.message });
       }
 
+      const bookingId = this.lastID;
+
+      // Trigger Real-time Notification
+      sendNotification(
+        userId, 
+        'Booking Protocol Initiated', 
+        `Your reservation for ${booking_date} at ${booking_time} has been recorded in the ledger.`,
+        'success',
+        { booking_id: bookingId }
+      );
+
       res.status(201).json({
         success: true,
         message: 'Booking created successfully!',
-        data: { booking_id: this.lastID, status: BOOKING_STATUS.PENDING }
+        data: { booking_id: bookingId, status: BOOKING_STATUS.PENDING }
       });
     });
   });
@@ -200,26 +212,42 @@ const updateBookingStatus = (req, res) => {
     });
   }
 
-  db.run('UPDATE bookings SET status = ? WHERE id = ?', [status, id], function (err) {
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to update booking status',
-        error: err.message,
-      });
-    }
+  // Get booking details for notification
+  db.get('SELECT user_id, booking_date, booking_time FROM bookings WHERE id = ?', [id], (err, booking) => {
+    if (booking) {
+      db.run('UPDATE bookings SET status = ? WHERE id = ?', [status, id], function (err) {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to update booking status',
+            error: err.message,
+          });
+        }
 
-    if (this.changes === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Booking not found',
-      });
-    }
+        if (this.changes === 0) {
+          return res.status(404).json({
+            success: false,
+            message: 'Booking not found',
+          });
+        }
 
-    res.json({
-      success: true,
-      message: 'Booking status updated successfully',
-    });
+        // Trigger Real-time Notification for status change
+        sendNotification(
+          booking.user_id, 
+          `Manifest Decree: ${status.toUpperCase()}`, 
+          `Your reservation for ${booking.booking_date} has been updated to ${status}.`,
+          status === 'confirmed' ? 'success' : 'info',
+          { booking_id: id, status }
+        );
+
+        res.json({
+          success: true,
+          message: 'Booking status updated successfully',
+        });
+      });
+    } else {
+      res.status(404).json({ success: false, message: 'Booking not found' });
+    }
   });
 };
 
@@ -229,7 +257,7 @@ const cancelBooking = (req, res) => {
   const userId = req.user.id;
 
   // Check if booking belongs to user
-  db.get('SELECT user_id, status FROM bookings WHERE id = ?', [id], (err, booking) => {
+  db.get('SELECT user_id, status, booking_date FROM bookings WHERE id = ?', [id], (err, booking) => {
     if (err) {
       return res.status(500).json({
         success: false,
@@ -267,6 +295,15 @@ const cancelBooking = (req, res) => {
           error: err.message,
         });
       }
+
+      // Trigger Real-time Notification
+      sendNotification(
+        userId, 
+        'Manifest Voided', 
+        `Your reservation for ${booking.booking_date} has been successfully cancelled.`,
+        'error',
+        { booking_id: id }
+      );
 
       res.json({
         success: true,
