@@ -1,5 +1,7 @@
 # Opus Dining -  Restaurant Reservation System
 
+![Logo](https://github.com/user-attachments/assets/e2097d54-416a-455b-b066-53a14602bbc4)
+
 Opus Dining is a high-end, full-stack restaurant reservation platform designed for exclusive architectural dining experiences. It provides a robust, fail-proof booking engine with a sophisticated, luxury-focused user interface.
 
 ## 🌟 Key Features
