@@ -20,64 +20,15 @@ Opus Dining is a high-end, full-stack restaurant reservation platform designed f
 
 ##  System Architecture
 
-```mermaid
-graph TD
-    Client[Web Browser / Client]
-    
-    sublayer_FE[Frontend Container]
-    Nginx[Nginx Web Server]
-    React[React Application]
-    
-    sublayer_BE[Backend Container]
-    Node[Node.js / Express API]
-    Auth[JWT Auth Middleware]
-    RateLimit[Rate Limiter]
-    
-    DB[(SQLite Database)]
-    
-    Client -->|HTTPS / REST| Nginx
-    Nginx -->|Serves Static Files| React
-    React -->|API Requests| RateLimit
-    RateLimit --> Auth
-    Auth --> Node
-    Node <-->|Read/Write with Atomic Locks| DB
-```
+<img width="2238" height="846" alt="Blank diagram (4)" src="https://github.com/user-attachments/assets/80e523c3-2412-492f-aabc-1ff65312175a" />
+
 
 ---
 
 ## Booking Workflow
+<img width="4798" height="1714" alt="Blank diagram (5)" src="https://github.com/user-attachments/assets/0f1e6b2a-9080-4542-88ac-60110e8807a7" />
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend
-    participant API
-    participant Database
 
-    User->>Frontend: Select Restaurant & Asset
-    Frontend->>API: GET /api/restaurants/:id/tables
-    API->>Database: Query available tables
-    Database-->>API: Return table list
-    API-->>Frontend: Display available assets
-    
-    User->>Frontend: Select Time, Guests & Protocols
-    User->>Frontend: Click "Confirm Digital Key"
-    
-    Frontend->>API: POST /api/bookings (Payload)
-    API->>Database: BEGIN EXCLUSIVE TRANSACTION
-    API->>Database: CHECK if asset is available
-    
-    alt Asset is Taken
-        Database-->>API: Conflict Error
-        API-->>Frontend: 400 "Asset already secured"
-        Frontend-->>User: Show Error Toast
-    else Asset is Available
-        API->>Database: INSERT Booking Record
-        Database-->>API: Success (ID returned)
-        API->>Database: COMMIT TRANSACTION
-        API-->>Frontend: 201 Created (Digital Key)
-        Frontend-->>User: Show Success & Redirect to Archive
-    end
 ```
 
 ---
