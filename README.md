@@ -1,9 +1,5 @@
 # Opus Dining -  Restaurant Reservation System
 
-![Logo](https://github.com/user-attachments/assets/e2097d54-416a-455b-b066-53a14602bbc4)
-
-
-
 https://github.com/user-attachments/assets/d366003a-b224-47b3-922f-e8091eb80701
 
 
